@@ -23,7 +23,17 @@
         h1 {
             text-align: center;
             color: #5865F2;
+            margin-bottom: 20px;
+        }
+        .status-bar {
+            text-align: center;
             margin-bottom: 30px;
+            padding: 10px;
+            background: #16213e;
+            border-radius: 10px;
+        }
+        .online {
+            color: #2ea043;
         }
         .stats {
             display: flex;
@@ -44,13 +54,13 @@
             font-size: 32px;
             color: #5865F2;
         }
-        .commands {
+        .commands, .servers {
             background: #16213e;
             padding: 20px;
             border-radius: 10px;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
-        .commands h2 {
+        .commands h2, .servers h2 {
             margin-bottom: 20px;
             border-left: 4px solid #5865F2;
             padding-left: 15px;
@@ -66,15 +76,9 @@
             border-radius: 8px;
             font-family: monospace;
         }
-        .servers {
-            background: #16213e;
-            padding: 20px;
-            border-radius: 10px;
-        }
-        .servers h2 {
-            margin-bottom: 20px;
-            border-left: 4px solid #5865F2;
-            padding-left: 15px;
+        .cmd-admin {
+            background: #f03030;
+            color: white;
         }
         .server-item {
             background: #0f0f1a;
@@ -92,11 +96,27 @@
             border-radius: 20px;
             font-size: 12px;
         }
+        .error {
+            background: rgba(240, 48, 48, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            color: #f03030;
+        }
         .footer {
             text-align: center;
             margin-top: 40px;
             padding: 20px;
             color: #666;
+        }
+        .refresh-btn {
+            background: #5865F2;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            margin-left: 10px;
         }
         @media (max-width: 768px) {
             .server-item {
@@ -110,6 +130,11 @@
 <body>
     <div class="container">
         <h1>🦖 DinoBlox Dashboard</h1>
+        
+        <div class="status-bar">
+            <span id="botStatus">🟢 Đang kết nối...</span>
+            <button class="refresh-btn" onclick="fetchData()">🔄 Refresh</button>
+        </div>
         
         <div class="stats">
             <div class="card">
@@ -133,65 +158,73 @@
         <div class="commands">
             <h2>📋 Danh sách lệnh</h2>
             <div class="cmd-list" id="cmdList">
-                <div class="cmd-item">/init</div>
-                <div class="cmd-item">/verify</div>
-                <div class="cmd-item">/update</div>
-                <div class="cmd-item">/promote</div>
-                <div class="cmd-item">/demote</div>
-                <div class="cmd-item">/setrank</div>
-                <div class="cmd-item">/rankbinds</div>
-                <div class="cmd-item">/custombinds</div>
-                <div class="cmd-item">/groupbinds</div>
-                <div class="cmd-item">/xp</div>
-                <div class="cmd-item">/xpbinds</div>
-                <div class="cmd-item">/status</div>
-                <div class="cmd-item">/getrole</div>
+                <div class="cmd-item">Đang tải...</div>
             </div>
         </div>
         
         <div class="servers">
             <h2>📊 Danh sách Server</h2>
             <div id="serverList">
-                <div class="server-item">🔄 Đang tải dữ liệu...</div>
+                <div class="server-item">Đang tải dữ liệu...</div>
             </div>
         </div>
         
         <div class="footer">
             <p>🦖 DinoBlox Bot | Quản lý Roblox Group</p>
-            <p>🔗 Dùng lệnh <span class="badge">/help</span> trong Discord để biết thêm chi tiết</p>
+            <p>🔗 Dùng lệnh <span class="badge">/help</span> trong Discord</p>
         </div>
     </div>
 
     <script>
-        // Dữ liệu mẫu - sau này thay bằng API thật
-        const data = {
-            servers: 8,
-            users: 1247,
-            commands: 16,
-            ping: 42,
-            serverList: [
-                { name: "🏰 DinoBlox Main", id: "123456789", members: 542 },
-                { name: "🎮 Roblox Vietnam", id: "234567890", members: 1280 },
-                { name: "⚔️ Game Hub", id: "345678901", members: 356 },
-                { name: "💻 Developer Zone", id: "456789012", members: 189 }
-            ]
-        };
+        // API URL - dùng IP hoặc domain bot-hosting
+        const API_URL = 'http://fi8.bot-hosting.net:21935';
         
-        // Cập nhật số liệu
-        document.getElementById('serverCount').innerText = data.servers;
-        document.getElementById('userCount').innerText = data.users.toLocaleString();
-        document.getElementById('cmdCount').innerText = data.commands;
-        document.getElementById('ping').innerText = data.ping + 'ms';
+        async function fetchData() {
+            try {
+                const response = await fetch(`${API_URL}/api/stats`);
+                const data = await response.json();
+                
+                // Update stats
+                document.getElementById('serverCount').innerText = data.servers || 0;
+                document.getElementById('userCount').innerText = (data.users || 0).toLocaleString();
+                document.getElementById('cmdCount').innerText = data.commands || 0;
+                document.getElementById('ping').innerText = (data.ping || 0) + 'ms';
+                document.getElementById('botStatus').innerHTML = '🟢 Online - ' + (data.botName || 'DinoBlox');
+                
+                // Update commands list
+                if (data.commandList && data.commandList.length > 0) {
+                    const adminCommands = ['init', 'removeinit', 'update-all', 'promote', 'demote', 'setrank', 'rankbinds', 'custombinds', 'groupbinds', 'xpbinds'];
+                    const cmdList = document.getElementById('cmdList');
+                    cmdList.innerHTML = data.commandList.map(cmd => `
+                        <div class="cmd-item ${adminCommands.includes(cmd) ? 'cmd-admin' : ''}">/${cmd}</div>
+                    `).join('');
+                }
+                
+                // Update servers list
+                if (data.serverList && data.serverList.length > 0) {
+                    const serverList = document.getElementById('serverList');
+                    serverList.innerHTML = data.serverList.map(s => `
+                        <div class="server-item">
+                            <span>🏠 ${s.name}</span>
+                            <span>👥 ${s.members} thành viên</span>
+                            <span class="badge">ID: ${s.id}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('serverList').innerHTML = '<div class="server-item">📭 Chưa có server nào</div>';
+                }
+            } catch (error) {
+                console.error('Lỗi:', error);
+                document.getElementById('botStatus').innerHTML = '🔴 Không kết nối được bot';
+                document.getElementById('serverList').innerHTML = '<div class="error">⚠️ Không thể kết nối đến bot. Hãy đảm bảo bot đang chạy.</div>';
+            }
+        }
         
-        // Cập nhật danh sách server
-        const serverList = document.getElementById('serverList');
-        serverList.innerHTML = data.serverList.map(s => `
-            <div class="server-item">
-                <span>${s.name}</span>
-                <span>👥 ${s.members} thành viên</span>
-                <span class="badge">ID: ${s.id}</span>
-            </div>
-        `).join('');
+        // Load data lần đầu
+        fetchData();
+        
+        // Tự động refresh mỗi 30 giây
+        setInterval(fetchData, 30000);
     </script>
 </body>
 </html>
